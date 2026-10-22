@@ -1,0 +1,45 @@
+{# _txn_filter_form.html — 共用篩選表單（美化版）#}
+<form method="get" action="{{ action_url }}" class="row g-2 align-items-end">
+  {% if show_type %}
+  <div class="col-6 col-md-2">
+    <label class="form-label">收支類型</label>
+    <select name="type" class="form-select form-select-sm">
+      <option value="" {% if not f_type %}selected{% endif %}>全部</option>
+      <option value="income"  {% if f_type=='income'  %}selected{% endif %}>收入</option>
+      <option value="expense" {% if f_type=='expense' %}selected{% endif %}>支出</option>
+    </select>
+  </div>
+  {% endif %}
+  <div class="col-6 col-md-2">
+    <label class="form-label">分類</label>
+    <select name="category" class="form-select form-select-sm">
+      <option value="">全部分類</option>
+      {% for c in cats %}
+        <option value="{{ c.name }}" {% if f_category==c.name %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-2">
+    <label class="form-label">起始日期</label>
+    <input type="date" name="date_from" value="{{ f_date_from }}" class="form-control form-control-sm">
+  </div>
+  <div class="col-6 col-md-2">
+    <label class="form-label">結束日期</label>
+    <input type="date" name="date_to" value="{{ f_date_to }}" class="form-control form-control-sm">
+  </div>
+  <div class="col-9 col-md-3">
+    <label class="form-label">關鍵字搜尋</label>
+    <input type="text" name="keyword" value="{{ f_keyword }}"
+           placeholder="分類、備註、傳票編號…" class="form-control form-control-sm">
+  </div>
+  <div class="col-3 col-md-1 d-grid">
+    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+  </div>
+  {% if f_type or f_category or f_keyword %}
+  <div class="col-12">
+    <a href="{{ action_url }}" class="text-muted small text-decoration-none">
+      <i class="bi bi-x-circle"></i> 清除篩選
+    </a>
+  </div>
+  {% endif %}
+</form>

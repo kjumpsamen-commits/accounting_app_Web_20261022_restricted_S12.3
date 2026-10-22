@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# SQLite 資料庫（不放入 git，由 Google Drive 下載）
+*.db
+*.db-wal
+*.db-shm
+*.db-bak
+*.db.tmp
+.accounting_app/
+
+# Google 認證（絕對不放入 git）
+credentials.json
+token.pickle
+service_account.json
+
+# 設定（含敏感資訊時加入此行）
+# web/config/config.yaml
+
+# 系統 / IDE
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

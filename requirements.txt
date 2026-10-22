@@ -1,0 +1,24 @@
+# Web 框架
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+jinja2>=3.1.4
+python-multipart>=0.0.9
+
+# 資料處理
+openpyxl>=3.1.0
+pyyaml>=6.0.1
+
+# 排程
+apscheduler>=3.10.4
+
+# HTTP 下載（模式 A：公開分享連結）
+requests>=2.31.0
+aiofiles>=23.2.1
+
+# 認證安全
+bcrypt>=4.1.0
+
+# Google Drive API（模式 B：Service Account，選用）
+google-api-python-client>=2.130.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0

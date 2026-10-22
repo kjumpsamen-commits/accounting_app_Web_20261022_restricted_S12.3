@@ -1,0 +1,36 @@
+{# _txn_table.html — 共用交易結果表格（美化版）#}
+{% if rows %}
+<div class="table-responsive">
+  <table class="table mb-0">
+    <thead>
+      <tr>
+        <th>日期</th>
+        {% if show_type %}<th>類型</th>{% endif %}
+        <th>分類</th>
+        <th>備註</th>
+        <th>傳票編號</th>
+        <th class="text-end">金額</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for t in rows %}
+      <tr>
+        <td>{{ t.date | fdate }}</td>
+        {% if show_type %}<td>{% if t.type == 'income' and t.category == '期初餘額' %}<span class="badge bg-info text-dark">期初</span>{% elif t.type == 'expense' and t.category == '交接轉出' %}<span class="badge bg-warning text-dark">轉出</span>{% else %}{{ t.type | type_badge | safe }}{% endif %}</td>{% endif %}
+        <td>{{ t.category }}</td>
+        <td class="text-muted">{{ t.note or "—" }}</td>
+        <td class="text-muted" style="font-size:0.78rem">{{ t.voucher_no or "—" }}</td>
+        <td class="text-end fw-semibold {% if t.type=='income' %}text-income{% else %}text-expense{% endif %}">
+          {{ t.amount | money }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-inbox"></i>
+  <p>查無符合條件的交易紀錄</p>
+</div>
+{% endif %}

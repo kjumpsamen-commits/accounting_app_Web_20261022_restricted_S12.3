@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>{% block title %}{{ app_title }}{% endblock %} — 唯讀查詢系統</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="/static/css/style.css" rel="stylesheet">
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Sidebar 遮罩（行動版）─────────────────────────────────── -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ── Sidebar ────────────────────────────────────────────────── -->
+{% set restricted = request.url.path.startswith('/restricted') %}
+<aside class="sidebar" id="sidebar">
+
+  <div class="sidebar-brand">
+    <h1 class="brand-title">
+      <i class="bi bi-wallet2"></i>
+      <span>{{ app_title }}</span>
+    </h1>
+    <span class="readonly-badge mt-1 d-inline-block">🔒 唯讀模式{% if restricted %}（簡易版）{% endif %}</span>
+  </div>
+
+  {% if restricted %}
+  {# S12.3：簡易版只顯示「繳費狀況」與「特殊收費」，其他項目整個隱藏（原本是灰色鎖住，仍看得到）。
+     管理設定／登入紀錄／登出只在管理頁（/restricted/admin/...，要自己輸入網址並登入）才顯示。 #}
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">查詢</div>
+    <ul class="sidebar-nav">
+      <li class="nav-item">
+        <a class="nav-link {% if page=='rent' %}active{% endif %}" href="/restricted/rent">
+          <i class="bi bi-calendar-check"></i> 繳費狀況
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if page=='special_charge' %}active{% endif %}" href="/restricted/special-charge">
+          <i class="bi bi-cash-coin"></i> 特殊收費
+        </a>
+      </li>
+    </ul>
+  </div>
+  {% if request.url.path.startswith('/restricted/admin') %}
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">系統</div>
+    <ul class="sidebar-nav">
+      <li class="nav-item">
+        <a class="nav-link {% if page=='admin' %}active{% endif %}" href="/restricted/admin/settings">
+          <i class="bi bi-gear"></i> 管理設定
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/restricted/admin/audit">
+          <i class="bi bi-journal-text"></i> 登入紀錄
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-danger" href="/restricted/admin/logout">
+          <i class="bi bi-box-arrow-right"></i> 登出
+        </a>
+      </li>
+    </ul>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">總覽</div>
+    <ul class="sidebar-nav">
+      <li class="nav-item">
+        {% if restricted %}
+        <a class="nav-link disabled" href="#" aria-disabled="true" tabindex="-1" onclick="return false;">
+          <i class="bi bi-speedometer2"></i> 首頁 Dashboard
+        </a>
+        {% else %}
+        <a class="nav-link {% if page=='dashboard' %}active{% endif %}" href="/">
+          <i class="bi bi-speedometer2"></i> 首頁 Dashboard
+        </a>
+        {% endif %}
+      </li>
+    </ul>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">交易查詢</div>
+    <ul class="sidebar-nav">
+      <li class="nav-item">
+        {% if restricted %}
+        <a class="nav-link disabled" href="#" aria-disabled="true" tabindex="-1" onclick="return false;">
+          <i class="bi bi-list-ul"></i> 全部交易
+        </a>
+        {% else %}
+        <a class="nav-link {% if page=='transactions' %}active{% endif %}" href="/transactions">
+          <i class="bi bi-list-ul"></i> 全部交易
+        </a>
+        {% endif %}
+      </li>
+      <li class="nav-item">
+        {% if restricted %}
+        <a class="nav-link disabled" href="#" aria-disabled="true" tabindex="-1" onclick="return false;">
+          <i class="bi bi-arrow-down-circle"></i> 收入明細
+        </a>
+        {% else %}
+        <a class="nav-link {% if page=='income' %}active{% endif %}" href="/income">
+          <i class="bi bi-arrow-down-circle"></i> 收入明細
+        </a>
+        {% endif %}
+      </li>
+      <li class="nav-item">
+        {% if restricted %}
+        <a class="nav-link disabled" href="#" aria-disabled="true" tabindex="-1" onclick="return false;">
+          <i class="bi bi-arrow-up-circle"></i> 支出明細
+        </a>
+        {% else %}
+        <a class="nav-link {% if page=='expense' %}active{% endif %}" href="/expense">
+          <i class="bi bi-arrow-up-circle"></i> 支出明細
+        </a>
+        {% endif %}
+      </li>
+    </ul>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">分析報表</div>
+    <ul class="sidebar-nav">
+      <li class="nav-item">
+        {% if restricted %}
+        <a class="nav-link disabled" href="#" aria-disabled="true" tabindex="-1" onclick="return false;">
+          <i class="bi bi-bar-chart-line"></i> 統計分析
+        </a>
+        {% else %}
+        <a class="nav-link {% if page=='statistics' %}active{% endif %}" href="/statistics">
+          <i class="bi bi-bar-chart-line"></i> 統計分析
+        </a>
+        {% endif %}
+      </li>
+      <li class="nav-item">
+        {% if restricted %}
+        <a class="nav-link disabled" href="#" aria-disabled="true" tabindex="-1" onclick="return false;">
+          <i class="bi bi-file-earmark-excel"></i> Excel 匯出
+        </a>
+        {% else %}
+        <a class="nav-link {% if page=='export' %}active{% endif %}" href="/export">
+          <i class="bi bi-file-earmark-excel"></i> Excel 匯出
+        </a>
+        {% endif %}
+      </li>
+    </ul>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">月費管理</div>
+    <ul class="sidebar-nav">
+      <li class="nav-item">
+        <a class="nav-link {% if page=='rent' %}active{% endif %}"
+           href="{{ '/restricted/rent' if restricted else '/rent' }}">
+          <i class="bi bi-calendar-check"></i> 繳費狀況
+        </a>
+      </li>
+      <li class="nav-item">
+        {% if restricted %}
+        <a class="nav-link disabled" href="#" aria-disabled="true" tabindex="-1" onclick="return false;">
+          <i class="bi bi-people"></i> 人員清單
+        </a>
+        {% else %}
+        <a class="nav-link {% if page=='tenants' %}active{% endif %}" href="/tenants">
+          <i class="bi bi-people"></i> 人員清單
+        </a>
+        {% endif %}
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if page=='special_charge' %}active{% endif %}"
+           href="{{ '/restricted/special-charge' if restricted else '/special-charge' }}">
+          <i class="bi bi-cash-coin"></i> 特殊收費
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">系統</div>
+    <ul class="sidebar-nav">
+      <li class="nav-item">
+        <a class="nav-link {% if page=='admin' %}active{% endif %}"
+           href="{{ '/restricted/admin/settings' if restricted else '/admin/settings' }}">
+          <i class="bi bi-gear"></i> 管理設定
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ '/restricted/admin/audit' if restricted else '/admin/audit' }}">
+          <i class="bi bi-journal-text"></i> 登入紀錄
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-danger" href="{{ '/restricted/admin/logout' if restricted else '/admin/logout' }}">
+          <i class="bi bi-box-arrow-right"></i> 登出
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 搜尋框 -->
+  <div class="sidebar-search">
+    {# S12.1：受限版沒有搜尋頁，搜尋框鎖住（原本會跳到完整版 /search，選單全部解鎖） #}
+    <form method="get" action="{{ '#' if restricted else '/search' }}"{% if restricted %} onsubmit="return false;"{% endif %}>
+      <div class="input-group input-group-sm">
+        <input type="search" name="q" class="form-control"
+               value="{% if page=='search' %}{{ q }}{% endif %}"
+               placeholder="{{ '受限模式無法搜尋' if restricted else '搜尋交易、人員…' }}"{% if restricted %} disabled{% endif %}>
+        <button type="submit" class="btn-search"{% if restricted %} disabled{% endif %}>
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+</aside>
+
+<!-- ── 主內容區 ─────────────────────────────────────────────────── -->
+<div class="main-wrapper">
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <button class="topbar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="切換選單">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="topbar-breadcrumb">
+      {% block breadcrumb %}{% endblock %}
+    </div>
+    <div class="topbar-date" id="topbarDate"></div>
+  </header>
+
+  <!-- 頁面內容 -->
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <i class="bi bi-shield-lock me-1"></i>
+    本系統為唯讀查詢介面，資料與桌面版共用同一資料庫，不提供任何新增／修改／刪除功能。
+    <span class="ms-2"><i class="bi bi-clock-history me-1"></i>資料最後更新：{{ last_saved_at() }}（桌面存檔）</span>
+    <span class="ms-2"><a href="{{ '/restricted/about' if restricted else '/about' }}" class="text-reset" title="關於、版本說明"><i class="bi bi-info-circle me-1"></i>版本 {{ app_version }}｜{{ app_edition_name }}</a></span>
+  </footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="/static/js/app.js"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

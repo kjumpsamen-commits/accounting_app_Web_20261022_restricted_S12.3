@@ -1,0 +1,16 @@
+render:
+  auto_download: true
+database:
+  local_path: /tmp/accounting.db
+  fallback_path: ~/.accounting_app/data.db
+google_drive:
+  # 預設公開分享資料庫
+  # https://drive.google.com/file/d/1q9ERU2odCIrcbMqMCD4v3fwskKrwGEvo/view
+  file_id: 1q9ERU2odCIrcbMqMCD4v3fwskKrwGEvo
+  folder_id: ''
+  database_filename: accounting.db
+sync:
+  interval_minutes: 30
+  enabled: true
+admin:
+  password: ''

@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: accounting-web
+    env: python
+    region: singapore          # 選離台灣最近的區域
+    plan: free                 # 可改為 starter / standard
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn web.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+
+    envVars:
+      # ── 管理者帳號（必填，在 Render Dashboard 設定）────────────
+      - key: ADMIN_USERNAME
+        sync: false            # 管理者帳號（例如 admin）
+
+      - key: ADMIN_PASSWORD_HASH
+        sync: false            # bcrypt hash（見 README 產生方式）
+
+      # ── 模式 A：公開分享連結（推薦，不需要 Google Cloud）────────
+      - key: GDRIVE_FILE_ID
+        sync: false            # Google Drive 檔案的 File ID
+
+      # ── 模式 B：Service Account（需要 Google Cloud）──────────────
+      - key: GDRIVE_FOLDER_ID
+        sync: false
+
+      - key: GDRIVE_SERVICE_ACCOUNT
+        sync: false
+
+      # ── 選填 ─────────────────────────────────────────────────────
+      - key: GDRIVE_DB_FILENAME
+        value: accounting.db
+
+      - key: SYNC_INTERVAL_MINUTES
+        value: "30"
+
+      - key: AUTO_DOWNLOAD
+        value: "true"
+
+      - key: DB_LOCAL_PATH
+        value: /tmp/accounting.db
+
+      - key: PYTHON_VERSION
+        value: "3.12.0"

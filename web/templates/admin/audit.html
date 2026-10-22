@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}登入紀錄{% endblock %}
+{% block breadcrumb %}<i class="bi bi-journal-text me-1"></i>登入稽核紀錄{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-journal-text"></i> 登入稽核紀錄</h2>
+  <a href="settings" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> 返回設定
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-list-ul"></i> 最近 {{ logs|length }} 筆</h6>
+    <span class="text-muted small">記憶體快照，重啟後清除</span>
+  </div>
+  <div class="card-body p-0">
+    {% if logs %}
+    <div class="table-responsive">
+      <table class="table table-sm mb-0" style="font-size:0.82rem">
+        <thead>
+          <tr>
+            <th>時間</th><th>事件</th><th>帳號</th><th>IP</th><th>瀏覽器</th><th>詳細</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for log in logs %}
+          <tr>
+            <td class="text-muted">{{ log.time }}</td>
+            <td>
+              {% if log.event == 'LOGIN_SUCCESS' %}
+                <span class="badge bg-success">✅ 登入成功</span>
+              {% elif log.event == 'LOGIN_FAIL' %}
+                <span class="badge bg-danger">❌ 登入失敗</span>
+              {% elif log.event == 'LOGOUT' %}
+                <span class="badge bg-secondary">🚪 登出</span>
+              {% elif log.event == 'SESSION_EXPIRED' %}
+                <span class="badge bg-warning text-dark">⏰ Session 過期</span>
+              {% elif log.event == 'RATE_LIMITED' %}
+                <span class="badge bg-danger">🚫 IP 鎖定</span>
+              {% else %}
+                <span class="badge bg-light text-dark">{{ log.event }}</span>
+              {% endif %}
+            </td>
+            <td>{{ log.username or "—" }}</td>
+            <td><code>{{ log.ip }}</code></td>
+            <td class="text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="{{ log.ua }}">{{ log.ua[:60] }}{% if log.ua|length > 60 %}…{% endif %}</td>
+            <td class="text-muted">{{ log.detail or "—" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state py-5"><i class="bi bi-inbox"></i><p>尚無登入紀錄</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

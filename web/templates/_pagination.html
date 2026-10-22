@@ -1,0 +1,24 @@
+{# _pagination.html — 共用分頁元件（美化版）#}
+{% if total_pages > 1 %}
+<nav class="d-flex justify-content-center">
+  <ul class="pagination pagination-sm mb-0">
+    <li class="page-item {% if cur_page <= 1 %}disabled{% endif %}">
+      <a class="page-link" href="{{ base_url }}?{{ querystring }}&page={{ cur_page - 1 }}">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+    </li>
+    {% set start = [cur_page - 2, 1] | max %}
+    {% set end   = [start + 4, total_pages] | min %}
+    {% for p in range(start, end + 1) %}
+      <li class="page-item {% if p == cur_page %}active{% endif %}">
+        <a class="page-link" href="{{ base_url }}?{{ querystring }}&page={{ p }}">{{ p }}</a>
+      </li>
+    {% endfor %}
+    <li class="page-item {% if cur_page >= total_pages %}disabled{% endif %}">
+      <a class="page-link" href="{{ base_url }}?{{ querystring }}&page={{ cur_page + 1 }}">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}

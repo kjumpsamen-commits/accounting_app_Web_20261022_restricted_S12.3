@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}全部交易{% endblock %}
+{% block breadcrumb %}<i class="bi bi-list-ul me-1"></i>全部交易{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-list-ul"></i> 全部交易</h2>
+  <a href="/export" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-file-earmark-excel"></i> 匯出
+  </a>
+</div>
+
+<div class="filter-card">
+  {% set action_url = "/transactions" %}
+  {% set show_type = true %}
+  {% include "_txn_filter_form.html" with context %}
+</div>
+
+<div class="stat-cards cols-4 mb-3">
+  <div class="stat-card income">
+    <div class="stat-label">區間收入</div>
+    <div class="stat-value income">{{ summary.total_income | money }}</div>
+    {% if summary.total_opening %}<div class="stat-sub">另有期初 {{ summary.total_opening | money }}（不算收入）</div>{% endif %}
+  </div>
+  <div class="stat-card expense">
+    <div class="stat-label">區間支出</div>
+    <div class="stat-value expense">{{ summary.total_expense | money }}</div>
+    {% if summary.total_transfer_out %}<div class="stat-sub">另有交接轉出 {{ summary.total_transfer_out | money }}（不算支出）</div>{% endif %}
+  </div>
+  <div class="stat-card balance">
+    <div class="stat-label">區間結餘</div>
+    <div class="stat-value {% if summary.balance >= 0 %}income{% else %}expense{% endif %}">
+      {{ summary.balance | money_signed }}
+    </div>
+  </div>
+  <div class="stat-card neutral">
+    <div class="stat-label"><i class="bi bi-calculator"></i> 累計結餘</div>
+    <div class="stat-value {% if cumulative_balance >= 0 %}income{% else %}expense{% endif %}">
+      {{ cumulative_balance | money_signed }}
+    </div>
+    <div class="stat-sub">所有時間總計</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-table"></i> 查詢結果</h6>
+    <span class="text-muted" style="font-size:0.8rem">共 {{ total_count }} 筆</span>
+  </div>
+  <div class="card-body p-0">
+    {% set show_type = true %}
+    {% include "_txn_table.html" with context %}
+  </div>
+  <div class="card-footer">
+    {% set base_url = "/transactions" %}
+    {% include "_pagination.html" with context %}
+  </div>
+</div>
+{% endblock %}

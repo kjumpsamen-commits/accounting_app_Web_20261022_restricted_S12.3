@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}月費繳費查詢{% endblock %}
+{% block breadcrumb %}<i class="bi bi-calendar-check me-1"></i>月費繳費查詢{% endblock %}
+
+{% block content %}
+{% set restricted = request.url.path.startswith('/restricted') %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-calendar-check"></i> 月費繳費查詢</h2>
+  {# S12.3：簡易版不顯示（原本灰色鎖住） #}
+  {% if not restricted %}
+  <a href="/export" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-file-earmark-excel"></i> 匯出
+  </a>
+  {% endif %}
+</div>
+
+<div class="filter-card">
+  <form method="get" action="{{ '/restricted/rent' if restricted else '/rent' }}" class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label">年度</label>
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in years %}
+          <option value="{{ y }}" {% if year==y %}selected{% endif %}>{{ y }} 年</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">月份</label>
+      <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if month==m %}selected{% endif %}>{{ m }} 月</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">年級篩選</label>
+      <select name="grade" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="" {% if not grade %}selected{% endif %}>全部年級</option>
+        {% for g in grades %}
+          <option value="{{ g }}" {% if grade==g %}selected{% endif %}>{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-grid">
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i> 查詢</button>
+    </div>
+    <div class="col-12 col-md-3 d-grid">
+      <a href="{{ '/restricted/rent' if restricted else '/rent' }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-calendar-date"></i> 回到本月
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- ── 摘要卡片 ──────────────────────────────────────────────────── -->
+<div class="stat-cards cols-4">
+  <div class="stat-card neutral">
+    <div class="stat-label">應收金額</div>
+    <div class="stat-value">{{ total | money }}</div>
+  </div>
+  <div class="stat-card income">
+    <div class="stat-label">已收金額</div>
+    <div class="stat-value income">{{ paid | money }}</div>
+  </div>
+  <div class="stat-card expense">
+    <div class="stat-label">未收金額</div>
+    <div class="stat-value expense">{{ unpaid | money }}</div>
+  </div>
+  <div class="stat-card balance">
+    <div class="stat-label">繳費進度</div>
+    {% set pct_val = (paid / total * 100) if total else 0 %}
+    <div class="stat-value brand">{{ pct_val | round(1) }}%</div>
+  </div>
+</div>
+
+<div class="progress mb-3" style="height:10px">
+  <div class="progress-bar bg-success" style="width:{{ pct_val }}%"></div>
+</div>
+
+<!-- 人數統計 Badge 列 -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <span class="badge paid fs-6 py-2 px-3">✅ 已繳 {{ paid_cnt }} 人</span>
+  <span class="badge pending fs-6 py-2 px-3">⏳ 未繳 {{ pending_cnt }} 人</span>
+  <span class="badge exempt fs-6 py-2 px-3">➖ 免繳 {{ exempt_cnt }} 人</span>
+</div>
+
+<!-- ── 繳費明細表 ─────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-header">
+    <h6 class="card-header-title">
+      <i class="bi bi-table"></i>
+      {{ year }}年{{ month }}月　繳費明細
+      {% if grade %}<span class="text-muted">（{{ grade }}）</span>{% endif %}
+    </h6>
+    <span class="text-muted" style="font-size:0.8rem">共 {{ payments|length }} 人</span>
+  </div>
+  <div class="card-body p-0">
+    {% if payments %}
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>年級</th><th>姓名</th><th class="text-end">每月費用</th>
+            <th>狀態</th><th>繳費日期</th><th>備註</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for p in payments %}
+          <tr>
+            <td class="text-muted">{{ p.grade or "—" }}</td>
+            <td class="fw-semibold">{{ p.name }}</td>
+            <td class="text-end">{{ p.monthly_rent | money }}</td>
+            <td>{{ p.status | status_badge | safe }}</td>
+            <td class="text-muted">{{ p.paid_date | fdate if p.paid_date else "—" }}</td>
+            <td class="text-muted">{{ p.payment_note or p.tenant_note or "—" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="bi bi-inbox"></i><p>此條件查無人員資料</p></div>
+    {% endif %}
+  </div>
+  <div class="card-footer d-flex justify-content-end">
+    {# S12.3：簡易版不顯示（原本灰色鎖住） #}
+    {% if not restricted %}
+    <a href="/tenants" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-people"></i> 完整人員清單
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}搜尋{% endblock %}
+{% block breadcrumb %}<i class="bi bi-search me-1"></i>全站搜尋{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-search"></i> 全站搜尋</h2>
+</div>
+
+<div class="filter-card">
+  <form method="get" action="/search" class="row g-2 align-items-end">
+    <div class="col-12 col-md-5">
+      <label class="form-label">關鍵字</label>
+      <input type="text" name="q" value="{{ q }}" autofocus
+             placeholder="搜尋分類、備註、傳票編號、金額，或月費人員姓名…"
+             class="form-control">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">起始日期（選填）</label>
+      <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">結束日期（選填）</label>
+      <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-12 col-md-3 d-grid">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-search"></i> 搜尋
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if not has_searched %}
+<div class="card">
+  <div class="empty-state py-5">
+    <i class="bi bi-search"></i>
+    <p>請輸入關鍵字以搜尋交易紀錄或月費人員</p>
+  </div>
+</div>
+
+{% elif not txns and not tenants %}
+<div class="card">
+  <div class="empty-state py-5">
+    <i class="bi bi-emoji-frown"></i>
+    <p>找不到符合「<strong>{{ q }}</strong>」的結果</p>
+  </div>
+</div>
+
+{% else %}
+
+{% if txns %}
+<div class="card mb-3">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-receipt"></i> 交易紀錄（{{ txns|length }} 筆）</h6>
+    {% if summary %}
+    <span class="text-muted" style="font-size:0.8rem">
+      收入 <span class="text-income fw-semibold">{{ summary.total_income | money }}</span>　
+      支出 <span class="text-expense fw-semibold">{{ summary.total_expense | money }}</span>
+      {% if summary.total_opening %}　期初 <span class="fw-semibold">{{ summary.total_opening | money }}</span>{% endif %}
+      {% if summary.total_transfer_out %}　交接轉出 <span class="fw-semibold">{{ summary.total_transfer_out | money }}</span>{% endif %}
+    </span>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    {% set rows = txns %}
+    {% set show_type = true %}
+    {% include "_txn_table.html" with context %}
+  </div>
+</div>
+{% endif %}
+
+{% if tenants %}
+<div class="card">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-people"></i> 月費人員（{{ tenants|length }} 人）</h6>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead><tr><th>姓名</th><th>年級</th><th class="text-end">每月費用</th><th>狀態</th><th>備註</th></tr></thead>
+        <tbody>
+        {% for t in tenants %}
+          <tr>
+            <td class="fw-semibold">{{ t.name }}</td>
+            <td class="text-muted">{{ t.grade or "—" }}</td>
+            <td class="text-end">{{ t.monthly_rent | money }}</td>
+            <td>{% if t.active %}<span class="badge active">啟用中</span>{% else %}<span class="badge inactive">已停用</span>{% endif %}</td>
+            <td class="text-muted">{{ t.note or "—" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer d-flex justify-content-end">
+    <a href="/rent" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-right"></i> 查看月費繳費狀況
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

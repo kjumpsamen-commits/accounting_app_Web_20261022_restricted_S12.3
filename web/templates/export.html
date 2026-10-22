@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Excel 匯出{% endblock %}
+{% block breadcrumb %}<i class="bi bi-file-earmark-excel me-1"></i>Excel 匯出{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-file-earmark-excel"></i> Excel 匯出</h2>
+  <span class="badge bg-warning text-dark py-2 px-3">
+    <i class="bi bi-shield-check"></i> 唯讀模式：僅下載，不寫入資料庫
+  </span>
+</div>
+
+<div class="row g-4">
+  <!-- ── 收支明細匯出 ──────────────────────────────────────────── -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <h6 class="card-header-title"><i class="bi bi-receipt"></i> 收支明細匯出</h6>
+      </div>
+      <div class="card-body">
+        <form id="txnExportForm" method="get" action="/export/transactions.xlsx">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">日期區間</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="date" name="date_from" id="txnDateFrom" class="form-control form-control-sm" placeholder="起始日期">
+              </div>
+              <div class="col-6">
+                <input type="date" name="date_to" id="txnDateTo" value="{{ today }}" class="form-control form-control-sm">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">快速選擇</label>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('this_month')">本月</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('last_month')">上個月</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('this_year')">今年</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('last_year')">去年</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDateRange('all')">全部</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">收支類型</label>
+            <select name="type" class="form-select form-select-sm">
+              <option value="all">全部（收入 ＋ 支出）</option>
+              <option value="income">僅收入</option>
+              <option value="expense">僅支出</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">月份統計工作表年份</label>
+            <select name="year_filter" class="form-select form-select-sm">
+              <option value="">全部年份</option>
+              {% for y in range(cur_year, cur_year - 6, -1) %}
+              <option value="{{ y }}">{{ y }} 年</option>
+              {% endfor %}
+            </select>
+            <div class="form-text text-muted">僅影響「月份統計」工作表</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">包含工作表</label>
+            <div class="row g-2">
+              {% for k, label, icon in [('include_detail','明細記錄','list-ul'),('include_year','年度統計','calendar3'),('include_month','月份統計','calendar-month'),('include_category','分類統計','pie-chart')] %}
+              <div class="col-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="{{ k }}" id="chk_{{ k }}" value="true" checked>
+                  <label class="form-check-label" for="chk_{{ k }}">
+                    <i class="bi bi-{{ icon }}"></i> {{ label }}
+                  </label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-success btn-lg">
+              <i class="bi bi-download"></i> 下載收支明細 Excel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 月費明細匯出 ──────────────────────────────────────────── -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header">
+        <h6 class="card-header-title"><i class="bi bi-house-door"></i> 月費繳費明細匯出</h6>
+      </div>
+      <div class="card-body">
+        <form method="get" action="/export/rent.xlsx">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">起始年月</label>
+            <div class="row g-2">
+              <div class="col-7">
+                <select name="start_year" class="form-select form-select-sm">
+                  {% for y in years %}<option value="{{ y }}" {% if y==cur_year %}selected{% endif %}>{{ y }} 年</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-5">
+                <select name="start_month" class="form-select form-select-sm">
+                  {% for m in range(1,13) %}<option value="{{ m }}" {% if m==1 %}selected{% endif %}>{{ m }} 月</option>{% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">結束年月</label>
+            <div class="row g-2">
+              <div class="col-7">
+                <select name="end_year" class="form-select form-select-sm">
+                  {% for y in years %}<option value="{{ y }}" {% if y==cur_year %}selected{% endif %}>{{ y }} 年</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-5">
+                <select name="end_month" class="form-select form-select-sm">
+                  {% for m in range(1,13) %}<option value="{{ m }}" {% if m==cur_month %}selected{% endif %}>{{ m }} 月</option>{% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-info small py-2 mb-4">
+            <i class="bi bi-info-circle"></i>
+            橫軸為人員、縱軸為年月，各格顯示繳費狀態
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-warning btn-lg text-dark">
+              <i class="bi bi-download"></i> 下載月費明細 Excel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 說明 ──────────────────────────────────────────────────────── -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-info-circle"></i> 工作表說明</h6>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <h6 class="fw-bold text-primary mb-2">收支明細 Excel</h6>
+        <ul class="small mb-0 ps-3">
+          <li><strong>明細記錄</strong>：依日期的逐筆收支，含前期餘額、累計餘額、傳票編號</li>
+          <li><strong>年度統計</strong>：各年收入、支出、結餘，含合計列</li>
+          <li><strong>月份統計</strong>：各月收支明細（可依年份篩選）</li>
+          <li><strong>分類統計</strong>：各分類金額及佔比</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h6 class="fw-bold" style="color:var(--income)" >月費明細 Excel</h6>
+        <ul class="small mb-0 ps-3">
+          <li><strong>格式</strong>：欄位為人員姓名、列為年月</li>
+          <li><strong>色彩</strong>：綠色=已繳、黃色=未繳、灰色=免繳</li>
+          <li><strong>範圍</strong>：可自由選擇起迄年月</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function setDateRange(range) {
+  const from = document.getElementById('txnDateFrom');
+  const to   = document.getElementById('txnDateTo');
+  const now  = new Date();
+  const pad  = n => String(n).padStart(2,'0');
+  const fmt  = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  if (range==='this_month') { from.value=`${now.getFullYear()}-${pad(now.getMonth()+1)}-01`; to.value=fmt(now); }
+  else if (range==='last_month') { const f=new Date(now.getFullYear(),now.getMonth()-1,1),l=new Date(now.getFullYear(),now.getMonth(),0); from.value=fmt(f); to.value=fmt(l); }
+  else if (range==='this_year') { from.value=`${now.getFullYear()}-01-01`; to.value=fmt(now); }
+  else if (range==='last_year') { from.value=`${now.getFullYear()-1}-01-01`; to.value=`${now.getFullYear()-1}-12-31`; }
+  else { from.value=''; to.value=''; }
+}
+document.getElementById('txnExportForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const url  = new URL(this.action);
+  const data = new FormData(this);
+  ['date_from','date_to','type','year_filter'].forEach(k => { const v=data.get(k); if(v) url.searchParams.set(k,v); });
+  ['include_detail','include_year','include_month','include_category'].forEach(k => {
+    url.searchParams.set(k, this.querySelector(`[name="${k}"]`).checked ? 'true' : 'false');
+  });
+  window.location.href = url.toString();
+});
+</script>
+{% endblock %}

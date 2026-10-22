@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}月費人員清單{% endblock %}
+{% block breadcrumb %}<i class="bi bi-people me-1"></i>月費人員清單{% endblock %}
+
+{% block content %}
+{% set restricted = request.url.path.startswith('/restricted') %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-people"></i> 月費人員清單</h2>
+  <a href="{{ '/restricted/rent' if restricted else '/rent' }}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-calendar-check"></i> 查看繳費狀況
+  </a>
+</div>
+
+<div class="stat-cards cols-3">
+  <div class="stat-card income">
+    <div class="stat-label">啟用中人員</div>
+    <div class="stat-value">{{ active|length }} <small class="fw-normal" style="font-size:0.9rem">人</small></div>
+  </div>
+  <div class="stat-card balance">
+    <div class="stat-label">每月應收總額</div>
+    <div class="stat-value brand">{{ total_monthly | money }}</div>
+  </div>
+  <div class="stat-card neutral">
+    <div class="stat-label">已停用人員</div>
+    <div class="stat-value">{{ inactive|length }} <small class="fw-normal" style="font-size:0.9rem">人</small></div>
+  </div>
+</div>
+
+{% if active %}
+{% for grade, members in by_grade.items() %}
+<div class="card mb-3">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-tag"></i> {{ grade }}</h6>
+    <span class="text-muted" style="font-size:0.8rem">
+      {{ members|length }} 人　小計 {{ members | sum(attribute="monthly_rent") | money }}
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0" style="font-size:0.875rem">
+        <thead><tr><th>姓名</th><th class="text-end">每月費用</th><th>備註</th></tr></thead>
+        <tbody>
+        {% for t in members %}
+          <tr>
+            <td class="fw-semibold">{{ t.name }}</td>
+            <td class="text-end text-income fw-semibold">{{ t.monthly_rent | money }}</td>
+            <td class="text-muted">{{ t.note or "—" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+  <div class="empty-state py-5"><i class="bi bi-people"></i><p>尚無啟用中的月費人員</p></div>
+</div>
+{% endif %}
+
+{% if inactive %}
+<div class="card">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-archive"></i> 已停用人員</h6>
+    <button class="btn btn-outline-secondary btn-sm" type="button"
+            data-bs-toggle="collapse" data-bs-target="#inactiveList">
+      顯示／隱藏（{{ inactive|length }} 人）
+    </button>
+  </div>
+  <div class="collapse" id="inactiveList">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table mb-0" style="font-size:0.875rem">
+          <thead><tr><th>年級</th><th>姓名</th><th class="text-end">每月費用</th><th>備註</th></tr></thead>
+          <tbody>
+          {% for t in inactive %}
+            <tr class="text-muted">
+              <td>{{ t.grade or "—" }}</td>
+              <td>{{ t.name }}</td>
+              <td class="text-end">{{ t.monthly_rent | money }}</td>
+              <td>{{ t.note or "—" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

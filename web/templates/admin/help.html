@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}資料來源說明{% endblock %}
+{% block breadcrumb %}<i class="bi bi-book me-1"></i>資料來源說明{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-book"></i> 資料來源說明（Google Drive File ID）</h2>
+  <a href="settings" class="btn btn-outline-secondary btn-sm ms-auto"><i class="bi bi-arrow-left"></i> 回管理設定</a>
+</div>
+
+{% set src_text = {
+  "env": "Render 環境變數 GDRIVE_FILE_ID",
+  "yaml": "web/config/config.yaml（程式內附的設定檔）",
+  "default": "程式預設值（web/config/settings.py）",
+  "runtime": "管理設定頁剛儲存的值（重新啟動後會恢復，見第 3 節）"} %}
+
+<!-- 1. 目前狀態 -->
+<div class="card mb-4">
+  <div class="card-header"><h6 class="card-header-title"><i class="bi bi-database"></i> 1. 目前狀態</h6></div>
+  <div class="card-body">
+    <table class="table table-sm mb-2" style="max-width:760px">
+      <tr><th class="text-muted fw-normal" style="width:190px">目前使用的 File ID</th><td class="font-monospace">{{ info.effective }}</td></tr>
+      <tr><th class="text-muted fw-normal">來源</th><td id="source">{{ src_text[info.source] }}</td></tr>
+      <tr><th class="text-muted fw-normal">Render 環境變數</th>
+          <td>{% if info.env_set %}已設定（{{ info.env }}）{% else %}<span class="text-muted">沒有設定（目前用程式內附的值）</span>{% endif %}</td></tr>
+      <tr><th class="text-muted fw-normal">上次同步</th>
+          <td>{% if last_sync.time %}{{ last_sync.time }}　{{ last_sync.message }}{% else %}<span class="text-muted">尚未同步</span>{% endif %}</td></tr>
+    </table>
+    <div class="small text-muted">為了安全，頁面只顯示 File ID 的前後 4 碼（見第 6 節）。</div>
+  </div>
+</div>
+
+<!-- 2. 交接（建議） -->
+<div class="card mb-4" style="border-color:var(--income)">
+  <div class="card-header"><h6 class="card-header-title"><i class="bi bi-arrow-left-right"></i> 2. 交接時怎麼改（建議做法：不用改程式）</h6></div>
+  <div class="card-body">
+    <ol class="mb-2">
+      <li>新負責人把 <code>data.db</code> 放到自己的 Google Drive（或在桌面程式「設定 → 資料庫位置」指到 Google Drive 同步資料夾）。</li>
+      <li>在 Google Drive 對該檔案按「共用」→ 一般存取權改成「<strong>知道連結的任何人</strong>」（檢視者），複製連結。<br>
+          連結格式：<code>https://drive.google.com/file/d/<strong>這一段就是 File ID</strong>/view</code></li>
+      <li>到 <strong>Render 控制台</strong> → 這個網站的服務 → <strong>Environment</strong> → 新增或修改 <code>GDRIVE_FILE_ID</code>，貼上新的 File ID → 儲存。Render 會自動重新部署（約數分鐘）。</li>
+      <li>重新部署後到「管理設定」按「立即同步」，確認首頁資料是新帳本的資料，並回到本頁確認「來源」顯示為「Render 環境變數」。</li>
+    </ol>
+    <div class="small text-muted">環境變數的優先順序最高，會蓋過程式內附的值，而且不會因為重新啟動而消失。</div>
+  </div>
+</div>
+
+<!-- 3. 不建議 -->
+<div class="card mb-4">
+  <div class="card-header"><h6 class="card-header-title"><i class="bi bi-exclamation-triangle"></i> 3. 不建議：在管理設定頁直接改 File ID</h6></div>
+  <div class="card-body small">
+    管理設定頁的「儲存設定」會寫入伺服器上的 <code>{{ info.yaml_path }}</code>。
+    Render 免費方案的檔案系統是暫時的：服務<strong>重新部署、重新啟動或休眠</strong>（15 分鐘沒有人使用就會休眠）時，這個修改就會消失，恢復成程式內附的值。
+    如果 Render 有設定環境變數，重新啟動後也會以環境變數為準。只適合「暫時測試一下新的 File ID」。
+  </div>
+</div>
+
+<!-- 4. 改程式 -->
+<div class="card mb-4">
+  <div class="card-header"><h6 class="card-header-title"><i class="bi bi-code-slash"></i> 4. 如果要改程式內附的值（沒有使用環境變數時）</h6></div>
+  <div class="card-body">
+    <p class="small mb-2">需要修改下列檔案（行號在開啟本頁時自動從程式檔案找出），改完後推送到 Git，Render 會自動重新部署：</p>
+    <table class="table table-sm small">
+      <thead><tr><th style="width:230px">檔案</th><th style="width:60px">行號</th><th>目前內容（File ID 已遮蔽）</th></tr></thead>
+      <tbody>
+      {% for ln, text in info.settings_lines %}
+        <tr><td class="font-monospace">{{ info.settings_path }}</td><td>{{ ln }}</td><td class="font-monospace">{{ text }}</td></tr>
+      {% endfor %}
+      {% for ln, text in info.yaml_lines %}
+        <tr><td class="font-monospace">{{ info.yaml_path }}</td><td>{{ ln }}</td><td class="font-monospace">{{ text }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="small mb-0">
+      含 <code>drive.google.com</code> 的是註解（說明用），含 <code>file_id</code> 的才是實際的值；兩者都建議一起改，避免以後看錯。<br>
+      <code>{{ info.render_path }}</code>
+      {% for ln, text in info.render_lines %}第 {{ ln }} 行{% endfor %}
+      只有變數名稱 <code>GDRIVE_FILE_ID</code>，<strong>不用改</strong>。
+    </p>
+  </div>
+</div>
+
+<!-- 5. File ID 什麼時候會變 -->
+<div class="card mb-4">
+  <div class="card-header"><h6 class="card-header-title"><i class="bi bi-question-circle"></i> 5. File ID 什麼時候會變</h6></div>
+  <div class="card-body small">
+    <ul class="mb-0">
+      <li><strong>不會變</strong>：同一個檔案被覆寫、或 Google Drive 電腦版同步更新同一個檔案。</li>
+      <li><strong>會變</strong>：刪掉後重新上傳、上傳成另一個檔案、或用桌面程式「設定 → 資料庫位置 → 變更」搬到另一個資料夾（會產生新檔案）。這時就要照第 2 節更新 File ID。</li>
+      <li>完整版與受限版如果是兩個不同的 Render 服務，兩個都要更新。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 6. 安全提醒 -->
+<div class="card mb-4">
+  <div class="card-header"><h6 class="card-header-title"><i class="bi bi-shield-exclamation"></i> 6. 安全提醒</h6></div>
+  <div class="card-body small">
+    檔案設定成「知道連結的任何人」，所以 <strong>File ID 等於整個帳本的鑰匙</strong>：拿到 File ID 的人可以直接下載 <code>data.db</code>。
+    <ul class="mb-0">
+      <li>程式的 Git 儲存庫請保持<strong>私人</strong>（目前程式中內附了 File ID）。</li>
+      <li>要把程式交給別人或公開前，先刪除第 4 節列出的 File ID，改用 Render 環境變數。</li>
+      <li>交接後，舊負責人的 Google Drive 檔案請取消「知道連結的任何人」分享。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 7. 模式 B -->
+<div class="card mb-4">
+  <div class="card-header"><h6 class="card-header-title"><i class="bi bi-gear-wide-connected"></i> 7. 模式 B：Service Account（進階，可用不公開的檔案）</h6></div>
+  <div class="card-body small">
+    需要 Google Cloud：建立 Service Account、把 Google Drive 資料夾分享給它，
+    在 Render 設定 <code>GDRIVE_FOLDER_ID</code>（資料夾 ID）與 <code>GDRIVE_SERVICE_ACCOUNT</code>（金鑰 JSON 整串），
+    並刪除 <code>GDRIVE_FILE_ID</code>，同時把第 4 節程式內附的 File ID 清空——只要還有任何 File ID（包含程式預設值），程式就會優先用模式 A（<code>web/services/sync/gdrive.py</code> 的 <code>download_db</code>）。
+    {% if info.folder_mode %}<br><strong>目前已設定資料夾 ID。</strong>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}統計分析{% endblock %}
+{% block breadcrumb %}<i class="bi bi-bar-chart-line me-1"></i>統計分析{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-bar-chart-line"></i> 統計分析</h2>
+  <a href="/export" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-file-earmark-excel"></i> 匯出
+  </a>
+</div>
+
+<!-- ── 篩選 ─────────────────────────────────────────────────────── -->
+<div class="filter-card">
+  <form method="get" action="/statistics" class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label">年度</label>
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in years %}
+          <option value="{{ y }}" {% if sel_year==y|string %}selected{% endif %}>{{ y }} 年</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">月份</label>
+      <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="" {% if not sel_month %}selected{% endif %}>全年</option>
+        {% for m in months %}
+          <option value="{{ m }}" {% if sel_month==m %}selected{% endif %}>{{ m }} 月</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-grid">
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i> 套用</button>
+    </div>
+    <div class="col-6 col-md-2 d-grid">
+      <a href="/statistics" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-counterclockwise"></i> 重設
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- ── 摘要卡片 ──────────────────────────────────────────────────── -->
+<div class="stat-cards cols-4">
+  <div class="stat-card income">
+    <div class="stat-label">{{ sel_year }}年{% if sel_month %}{{ sel_month }}月{% endif %} 收入</div>
+    <div class="stat-value income">{{ summary.total_income | money }}</div>
+    {% if summary.total_opening %}<div class="stat-sub">另有期初 {{ summary.total_opening | money }}（不算收入）</div>{% endif %}
+  </div>
+  <div class="stat-card expense">
+    <div class="stat-label">{{ sel_year }}年{% if sel_month %}{{ sel_month }}月{% endif %} 支出</div>
+    <div class="stat-value expense">{{ summary.total_expense | money }}</div>
+    {% if summary.total_transfer_out %}<div class="stat-sub">另有交接轉出 {{ summary.total_transfer_out | money }}（不算支出）</div>{% endif %}
+  </div>
+  <div class="stat-card balance">
+    <div class="stat-label">結餘</div>
+    {% set bal = summary.balance %}{# S10：期初＋收入－支出－交接轉出 #}
+    <div class="stat-value {% if bal >= 0 %}income{% else %}expense{% endif %}">{{ bal | money_signed }}</div>
+  </div>
+  <div class="stat-card neutral">
+    <div class="stat-label">筆數</div>
+    <div class="stat-value">{{ summary.count }} <small class="fw-normal" style="font-size:0.9rem">筆</small></div>
+  </div>
+</div>
+
+<!-- ── 年度統計 ──────────────────────────────────────────────────── -->
+<div class="card mb-3">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-calendar3"></i> 年度統計</h6>
+  </div>
+  <div class="card-body">
+    {% if year_stats %}
+    <canvas id="yearChart" height="75" class="mb-3"></canvas>
+    <div class="table-responsive">
+      <table class="table mb-0" style="font-size:0.85rem">
+        <thead><tr>
+          <th>年度</th><th class="text-end">收入</th><th class="text-end">支出</th>
+          <th class="text-end">收支差</th><th class="text-end">筆數</th>
+        </tr></thead>
+        <tbody>
+        {% for r in year_stats %}
+          <tr {% if r.year == sel_year %}style="background:var(--brand-light)"{% endif %}>
+            <td><a href="/statistics?year={{ r.year }}" class="text-decoration-none fw-semibold">{{ r.year }}</a></td>
+            <td class="text-end text-income">{{ r.income | money }}</td>
+            <td class="text-end text-expense">{{ r.expense | money }}</td>
+            <td class="text-end {% if r.income-r.expense>=0 %}text-income{% else %}text-expense{% endif %}">
+              {{ (r.income-r.expense) | money_signed }}
+            </td>
+            <td class="text-end text-muted">{{ r.count }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="bi bi-inbox"></i><p>尚無年度資料</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── 月份統計 ──────────────────────────────────────────────────── -->
+<div class="card mb-3">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-calendar-month"></i> {{ sel_year }} 年　月份統計</h6>
+  </div>
+  <div class="card-body">
+    {% if month_stats %}
+    <canvas id="monthChart" height="75" class="mb-3"></canvas>
+    <div class="table-responsive">
+      <table class="table mb-0" style="font-size:0.85rem">
+        <thead><tr>
+          <th>月份</th><th class="text-end">收入</th><th class="text-end">支出</th>
+          <th class="text-end">收支差</th><th class="text-end">筆數</th>
+        </tr></thead>
+        <tbody>
+        {% for r in month_stats %}
+          {% set m_num = r.month.split('-')[1] if '-' in r.month else r.month %}
+          <tr {% if sel_month and m_num|int == sel_month|int %}style="background:var(--brand-light)"{% endif %}>
+            <td><a href="/statistics?year={{ sel_year }}&month={{ m_num|int }}" class="text-decoration-none fw-semibold">{{ r.month }}</a></td>
+            <td class="text-end text-income">{{ r.income | money }}</td>
+            <td class="text-end text-expense">{{ r.expense | money }}</td>
+            <td class="text-end {% if r.income-r.expense>=0 %}text-income{% else %}text-expense{% endif %}">
+              {{ (r.income-r.expense) | money_signed }}
+            </td>
+            <td class="text-end text-muted">{{ r.count }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="bi bi-inbox"></i><p>{{ sel_year }} 年尚無月份資料</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── 每日統計 ──────────────────────────────────────────────────── -->
+{% if sel_month %}
+<div class="card mb-3">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-calendar-day"></i> {{ sel_year }}年{{ sel_month }}月　每日統計</h6>
+  </div>
+  <div class="card-body">
+    {% if day_stats %}
+    <canvas id="dayChart" height="75" class="mb-3"></canvas>
+    <div class="table-responsive">
+      <table class="table mb-0" style="font-size:0.85rem">
+        <thead><tr>
+          <th>日期</th><th class="text-end">收入</th><th class="text-end">支出</th>
+          <th class="text-end">收支差</th><th class="text-end">筆數</th>
+        </tr></thead>
+        <tbody>
+        {% for r in day_stats %}
+          <tr>
+            <td>{{ r.date | fdate }}</td>
+            <td class="text-end text-income">{{ r.income | money }}</td>
+            <td class="text-end text-expense">{{ r.expense | money }}</td>
+            <td class="text-end {% if r.income-r.expense>=0 %}text-income{% else %}text-expense{% endif %}">
+              {{ (r.income-r.expense) | money_signed }}
+            </td>
+            <td class="text-end text-muted">{{ r.count }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="bi bi-inbox"></i><p>本月尚無每日資料</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── 分類統計 Tab ───────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-header" style="padding-bottom:0;border-bottom:none">
+    <ul class="nav nav-tabs" style="border-bottom:none;margin-bottom:-1px">
+      <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#expTab" type="button">
+          <i class="bi bi-arrow-up-circle text-expense"></i> 支出分類
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#incTab" type="button">
+          <i class="bi bi-arrow-down-circle text-income"></i> 收入分類
+        </button>
+      </li>
+    </ul>
+  </div>
+  <div class="card-body">
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="expTab">
+        {% if expense_cats %}
+        <div class="row g-3">
+          <div class="col-md-5"><canvas id="expPieChart" height="230"></canvas></div>
+          <div class="col-md-7">
+            <table class="table mb-0" style="font-size:0.85rem">
+              <thead><tr><th>分類</th><th class="text-end">金額</th><th class="text-end">佔比</th></tr></thead>
+              <tbody>
+              {% for cat, amt in expense_cats %}
+                <tr>
+                  <td>{{ cat }}</td>
+                  <td class="text-end text-expense fw-semibold">{{ amt | money }}</td>
+                  <td class="text-end text-muted">{{ amt | pct(exp_total) }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-inbox"></i><p>此區間尚無支出資料</p></div>
+        {% endif %}
+      </div>
+      <div class="tab-pane fade" id="incTab">
+        {% if income_cats %}
+        <div class="row g-3">
+          <div class="col-md-5"><canvas id="incPieChart" height="230"></canvas></div>
+          <div class="col-md-7">
+            <table class="table mb-0" style="font-size:0.85rem">
+              <thead><tr><th>分類</th><th class="text-end">金額</th><th class="text-end">佔比</th></tr></thead>
+              <tbody>
+              {% for cat, amt in income_cats %}
+                <tr>
+                  <td>{{ cat }}</td>
+                  <td class="text-end text-income fw-semibold">{{ amt | money }}</td>
+                  <td class="text-end text-muted">{{ amt | pct(inc_total) }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-inbox"></i><p>此區間尚無收入資料</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const CHART_OPTS = { responsive:true, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{ size:11 } } } } };
+const BAR_OPTS   = { ...CHART_OPTS, scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>'$'+v.toLocaleString() } } } };
+
+const yearData = {{ year_stats_chart | tojson }};
+if (yearData.length) new Chart(document.getElementById('yearChart'),{type:'bar',data:{labels:yearData.map(r=>r.year),datasets:[{label:'收入',data:yearData.map(r=>r.income),backgroundColor:'rgba(5,150,105,0.8)',borderRadius:4},{label:'支出',data:yearData.map(r=>r.expense),backgroundColor:'rgba(220,38,38,0.8)',borderRadius:4}]},options:BAR_OPTS});
+
+const monthData = {{ month_stats_chart | tojson }};
+if (monthData.length) new Chart(document.getElementById('monthChart'),{type:'bar',data:{labels:monthData.map(r=>r.month),datasets:[{label:'收入',data:monthData.map(r=>r.income),backgroundColor:'rgba(5,150,105,0.8)',borderRadius:4},{label:'支出',data:monthData.map(r=>r.expense),backgroundColor:'rgba(220,38,38,0.8)',borderRadius:4}]},options:BAR_OPTS});
+
+const dayCanvas = document.getElementById('dayChart');
+if (dayCanvas){const d={{ day_stats_chart | tojson }};new Chart(dayCanvas,{type:'line',data:{labels:d.map(r=>r.date),datasets:[{label:'收入',data:d.map(r=>r.income),borderColor:'#059669',backgroundColor:'rgba(5,150,105,0.08)',fill:true,tension:0.3,pointRadius:3},{label:'支出',data:d.map(r=>r.expense),borderColor:'#DC2626',backgroundColor:'rgba(220,38,38,0.08)',fill:true,tension:0.3,pointRadius:3}]},options:BAR_OPTS});}
+
+const PIE_E = ['#DC2626','#F97316','#F59E0B','#EAB308','#84CC16','#06B6D4','#6366F1','#A855F7','#EC4899','#64748B'];
+const PIE_I = ['#059669','#10B981','#34D399','#6EE7B7','#22C55E','#84CC16'];
+const expCats={{ expense_cats | tojson }};
+if(expCats.length) new Chart(document.getElementById('expPieChart'),{type:'doughnut',data:{labels:expCats.map(c=>c[0]),datasets:[{data:expCats.map(c=>c[1]),backgroundColor:PIE_E,borderWidth:0}]},options:CHART_OPTS});
+const incCats={{ income_cats | tojson }};
+if(incCats.length) new Chart(document.getElementById('incPieChart'),{type:'doughnut',data:{labels:incCats.map(c=>c[0]),datasets:[{data:incCats.map(c=>c[1]),backgroundColor:PIE_I,borderWidth:0}]},options:CHART_OPTS});
+</script>
+{% endblock %}

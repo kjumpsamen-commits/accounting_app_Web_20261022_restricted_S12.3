@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}收入明細{% endblock %}
+{% block breadcrumb %}<i class="bi bi-arrow-down-circle me-1 text-income"></i>收入明細{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title" style="color:var(--income)"><i class="bi bi-arrow-down-circle"></i> 收入明細</h2>
+  <a href="/export" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-file-earmark-excel"></i> 匯出
+  </a>
+</div>
+
+<div class="filter-card">
+  {% set action_url = "/income" %}
+  {% set show_type = false %}
+  {% set f_type = "" %}
+  {% include "_txn_filter_form.html" with context %}
+</div>
+
+<div class="stat-cards cols-2 mb-3">
+  <div class="stat-card income">
+    <div class="stat-label">區間收入合計</div>
+    <div class="stat-value income">{{ summary.total_income | money }}</div>
+  </div>
+  <div class="stat-card neutral">
+    <div class="stat-label">筆數</div>
+    <div class="stat-value">{{ summary.count }} <small class="fw-normal" style="font-size:0.9rem">筆</small></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h6 class="card-header-title"><i class="bi bi-table"></i> 收入明細</h6>
+    <span class="text-muted" style="font-size:0.8rem">共 {{ total_count }} 筆</span>
+  </div>
+  <div class="card-body p-0">
+    {% set show_type = false %}
+    {% include "_txn_table.html" with context %}
+  </div>
+  <div class="card-footer">
+    {% set base_url = "/income" %}
+    {% include "_pagination.html" with context %}
+  </div>
+</div>
+{% endblock %}

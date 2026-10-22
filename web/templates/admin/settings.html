@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}管理設定{% endblock %}
+{% block breadcrumb %}<i class="bi bi-gear me-1"></i>管理設定{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-gear"></i> 管理設定</h2>
+  <a href="help" class="btn btn-outline-primary btn-sm ms-auto me-2"><i class="bi bi-book"></i> 📖 資料來源說明（交接必讀）</a>
+  {% if request.query_params.get('saved') %}
+  <span class="badge bg-success fs-6 py-2 px-3">
+    <i class="bi bi-check-circle"></i> 設定已儲存
+  </span>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+
+  <!-- ── 資料庫狀態 ────────────────────────────────────────────── -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-header-title"><i class="bi bi-database"></i> 目前資料庫狀態</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-5">
+            <div class="text-muted small mb-1">資料庫路徑</div>
+            <code>{{ db_path }}</code>
+          </div>
+          <div class="col-md-2">
+            <div class="text-muted small mb-1">狀態</div>
+            {% if db_exists %}
+              <span class="badge bg-success">✅ 檔案存在</span>
+            {% else %}
+              <span class="badge bg-danger">❌ 尚未下載</span>
+            {% endif %}
+          </div>
+          <div class="col-md-5">
+            <div class="text-muted small mb-1">上次同步</div>
+            {% if last_sync.time %}
+              <span class="small {% if last_sync.success %}text-income{% else %}text-expense{% endif %}">
+                {{ last_sync.time }}　{{ last_sync.message }}
+                {% if last_sync.elapsed %}（{{ last_sync.elapsed }}s）{% endif %}
+              </span>
+            {% else %}
+              <span class="text-muted small">尚未同步</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 設定表單 ──────────────────────────────────────────────── -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-header-title"><i class="bi bi-cloud-download"></i> Google Drive 設定</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="settings">
+
+          <!-- 模式選擇說明 -->
+          <div class="alert alert-info py-2 mb-3 small">
+            <strong>兩種模式擇一設定即可：</strong><br>
+            <span class="text-success">● 模式 A（推薦）</span>　不需要 Google Cloud，只要檔案設為公開，填入 File ID 即可。<br>
+            <span class="text-secondary">● 模式 B</span>　需要 Google Cloud Service Account，私有檔案使用。
+          </div>
+
+          <!-- 模式 A：File ID（公開分享） -->
+          <div class="border rounded p-3 mb-3" style="border-color:var(--income)!important">
+            <div class="d-flex align-items-center mb-2">
+              <span class="badge bg-success me-2">推薦</span>
+              <strong>模式 A — 公開分享連結（不需要 Google Cloud）</strong>
+            </div>
+            <label class="form-label">Google Drive File ID</label>
+            <input type="text" name="file_id" class="form-control form-control-sm font-monospace"
+                   value="{{ cfg.google_drive.get('file_id','') }}"
+                   placeholder="例：1A2B3C4D5E6F7G8H9I0J">
+            <div class="form-text">
+              在 Google Drive 把檔案設為「知道連結的人可以查看」，
+              從分享連結中取出 ID：<br>
+              <code>drive.google.com/file/d/<strong>這串就是 File ID</strong>/view</code>
+            </div>
+          </div>
+
+          <!-- 模式 B：Folder ID（Service Account） -->
+          <div class="border rounded p-3 mb-3">
+            <div class="d-flex align-items-center mb-2">
+              <span class="badge bg-secondary me-2">進階</span>
+              <strong>模式 B — Service Account（需要 Google Cloud）</strong>
+            </div>
+            <label class="form-label">Google Drive Folder ID</label>
+            <input type="text" name="folder_id" class="form-control form-control-sm font-monospace"
+                   value="{{ cfg.google_drive.folder_id }}"
+                   placeholder="例：1A2B3C4D5E6F7G8H9I0J（資料夾 ID）">
+            <div class="form-text">
+              需同時在 Render 設定環境變數 <code>GDRIVE_SERVICE_ACCOUNT</code>（JSON 字串）
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">資料庫檔名</label>
+            <input type="text" name="db_filename" class="form-control form-control-sm font-monospace"
+                   value="{{ cfg.google_drive.database_filename }}"
+                   placeholder="accounting.db">
+            <div class="form-text">Google Drive 上的 SQLite 檔名（模式 B 使用）</div>
+          </div>
+
+          <hr>
+          <h6 class="fw-bold mb-3"><i class="bi bi-clock"></i> 自動同步設定</h6>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">同步間隔</label>
+            <select name="interval_minutes" class="form-select form-select-sm">
+              {% for iv in intervals %}
+                <option value="{{ iv }}"
+                  {% if cfg.sync.interval_minutes == iv %}selected{% endif %}>
+                  {% if iv == 1440 %}每天{% elif iv >= 60 %}{{ iv // 60 }} 小時{% else %}{{ iv }} 分鐘{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="sync_enabled"
+                     id="syncEnabled" {% if cfg.sync.enabled %}checked{% endif %}>
+              <label class="form-check-label" for="syncEnabled">啟用自動定期同步</label>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="auto_download"
+                     id="autoDownload" {% if cfg.render.auto_download %}checked{% endif %}>
+              <label class="form-check-label" for="autoDownload">應用程式啟動時自動同步</label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> 儲存設定
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 右側：手動同步 + 環境變數 ────────────────────────────── -->
+  <div class="col-lg-4">
+
+    <!-- 手動同步 -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="card-header-title"><i class="bi bi-arrow-repeat"></i> 手動同步</h6>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-3">立即從 Google Drive 下載最新資料庫。</p>
+        <button id="syncBtn" class="btn btn-warning w-100" onclick="triggerSync()">
+          <i class="bi bi-cloud-download"></i> 立即同步
+        </button>
+        <div id="syncResult" class="mt-3 d-none">
+          <div class="alert mb-0" id="syncAlert"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 環境變數 -->
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-header-title"><i class="bi bi-key"></i> Render 環境變數</h6>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:0.74rem">
+          <thead>
+            <tr>
+              <th class="ps-3">變數名稱</th>
+              <th>說明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="table-success">
+              <td class="ps-3 font-monospace">GDRIVE_FILE_ID</td>
+              <td>模式A：File ID ⭐</td>
+            </tr>
+            <tr>
+              <td class="ps-3 font-monospace">GDRIVE_FOLDER_ID</td>
+              <td>模式B：資料夾 ID</td>
+            </tr>
+            <tr>
+              <td class="ps-3 font-monospace">GDRIVE_SERVICE_ACCOUNT</td>
+              <td>模式B：SA JSON</td>
+            </tr>
+            <tr>
+              <td class="ps-3 font-monospace">GDRIVE_DB_FILENAME</td>
+              <td>檔名（選填）</td>
+            </tr>
+            <tr>
+              <td class="ps-3 font-monospace">SYNC_INTERVAL_MINUTES</td>
+              <td>間隔分鐘（選填）</td>
+            </tr>
+            <tr>
+              <td class="ps-3 font-monospace">AUTO_DOWNLOAD</td>
+              <td>啟動下載 true/false</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function triggerSync() {
+  const btn  = document.getElementById('syncBtn');
+  const res  = document.getElementById('syncResult');
+  const alrt = document.getElementById('syncAlert');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>同步中…';
+  res.classList.add('d-none');
+  try {
+    const r    = await fetch('sync', { method: 'POST' });
+    const data = await r.json();
+    res.classList.remove('d-none');
+    alrt.className = 'alert mb-0 ' + (data.success ? 'alert-success' : 'alert-danger');
+    alrt.innerHTML = (data.success ? '✅ ' : '❌ ') + data.message
+                   + (data.elapsed ? ` (${data.elapsed}s)` : '');
+    if (data.success) setTimeout(() => location.reload(), 1500);
+  } catch(e) {
+    res.classList.remove('d-none');
+    alrt.className = 'alert mb-0 alert-danger';
+    alrt.textContent = '❌ 請求失敗：' + e;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-cloud-download"></i> 立即同步';
+  }
+}
+</script>
+{% endblock %}

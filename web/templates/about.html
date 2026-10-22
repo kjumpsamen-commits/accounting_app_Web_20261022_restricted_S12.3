@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}關於{% endblock %}
+{% block breadcrumb %}<i class="bi bi-info-circle me-1"></i>關於{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-info-circle"></i> 關於</h2>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <table class="table table-sm mb-0" style="max-width:520px">
+      <tr><th class="text-muted fw-normal" style="width:120px">程式名稱</th><td>{{ app_title }}</td></tr>
+      <tr><th class="text-muted fw-normal">版本</th><td class="fw-semibold">{{ version.version_text() }}</td></tr>
+      <tr><th class="text-muted fw-normal">網站版本別</th><td class="fw-semibold">{{ app_edition.EDITION_NAME }}</td></tr>
+      <tr><th class="text-muted fw-normal">開放範圍</th><td>{{ app_edition.EDITION_SCOPE }}</td></tr>
+      <tr><th class="text-muted fw-normal">監製者</th><td>{{ version.PRODUCER }}</td></tr>
+      <tr><th class="text-muted fw-normal">程式撰寫者</th><td>{{ version.AUTHOR }}</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h6 class="card-header-title"><i class="bi bi-clock-history"></i> 版本說明</h6></div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th class="ps-3" style="width:110px">日期</th><th style="width:80px">版本</th><th>內容</th></tr></thead>
+      <tbody>
+      {% for d, v, text in version.HISTORY %}
+        <tr><td class="ps-3">{{ d }}</td><td class="fw-semibold">{{ v }}</td><td>{{ text }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<p class="text-muted small mt-3">桌面版、網頁完整版與簡易版使用相同的版本號；用「網站版本別」分辨目前是完整版還是簡易版。</p>
+{% endblock %}

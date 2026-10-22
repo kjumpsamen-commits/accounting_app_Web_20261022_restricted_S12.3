@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}特殊收費查詢{% endblock %}
+{% block breadcrumb %}<i class="bi bi-cash-coin me-1"></i>特殊收費查詢{% endblock %}
+
+{% block content %}
+{% set restricted = request.url.path.startswith('/restricted') %}
+{% set sc_base = '/restricted/special-charge' if restricted else '/special-charge' %}
+<div class="page-header">
+  <h2 class="page-title"><i class="bi bi-cash-coin"></i> 特殊收費查詢</h2>
+</div>
+
+<div class="filter-card">
+  <form method="get" action="{{ sc_base }}" class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label">年度</label>
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in years %}
+          <option value="{{ y }}" {% if selected_year==y %}selected{% endif %}>{{ y }} 年</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-grid">
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i> 查詢</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <!-- ★ 手機直向修正：日期/狀態/應收已收 在小螢幕隱藏（d-none d-md-table-cell），
+         活動名稱 + 已繳/總人數 + 查看明細按鈕在任何螢幕寬度都保證可見，
+         不需要橫向滑動。沿用 Bootstrap 既有 responsive utility class，
+         沒有引入新的 CSS framework。 -->
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>活動名稱</th>
+          <th class="d-none d-md-table-cell">日期</th>
+          <th class="d-none d-md-table-cell">狀態</th>
+          <th>已繳/總人數</th>
+          <th class="d-none d-md-table-cell">應收/已收</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in activities %}
+        <tr class="{% if activity_id==a.id %}table-active{% endif %}">
+          <td>{{ a.name }}</td>
+          <td class="d-none d-md-table-cell">{{ a.activity_date or "-" }}</td>
+          <td class="d-none d-md-table-cell">
+            {% if a.status == "completed" %}
+              <span class="badge bg-success">已完成</span>
+            {% else %}
+              <span class="badge bg-secondary">進行中</span>
+            {% endif %}
+          </td>
+          <td>{{ a.member_paid }} / {{ a.member_total }}</td>
+          <td class="d-none d-md-table-cell">-</td>
+          <td>
+            <a href="{{ sc_base }}?year={{ selected_year }}&activity_id={{ a.id }}"
+               class="btn btn-outline-primary btn-sm">
+              查看明細
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted">這個年度沒有特殊收費活動</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if selected_activity %}
+<div class="card mt-3">
+  <div class="card-body">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-2 gap-2">
+      <h4 class="mb-0">{{ selected_activity.name }}
+        {% if selected_activity.status == "completed" %}
+          <span class="badge bg-success">已完成</span>
+        {% else %}
+          <span class="badge bg-secondary">進行中</span>
+        {% endif %}
+      </h4>
+    </div>
+
+    <!-- ★ 新增：已收/應收統計（介於活動名稱與下載 Excel 按鈕之間） -->
+    <p class="mb-2">
+      已收：<strong>${{ "{:,.0f}".format(total_collected) }}</strong>
+      / 應收：<strong>${{ "{:,.0f}".format(total_receivable) }}</strong>
+    </p>
+
+    <div class="mb-3">
+      <a href="{{ '/restricted/special-charge/export.xlsx' if restricted else '/special-charge/export.xlsx' }}?activity_id={{ selected_activity.id }}"
+         class="btn btn-outline-success btn-sm w-100 w-md-auto">
+        <i class="bi bi-file-earmark-excel"></i> 下載特殊收費 Excel
+      </a>
+    </div>
+
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>年級</th>
+          <th>姓名</th>
+          <th>應收</th>
+          <th>已繳</th>
+          <th>日期</th>
+          <th>明細</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <!-- ★ 已繳整列淡綠色（Bootstrap 既有的 table-success，不新增 CSS） -->
+        <tr class="{% if m.paid %}table-success{% endif %}">
+          <td>{{ m.grade or "-" }}</td>
+          <td>{{ m.tenant_name }}{% if m.is_guest %}<span class="text-muted small">（臨時）</span>{% endif %}</td>
+          <td>${{ "%.0f"|format(m.receivable) }}</td>
+          <td>
+            {% if m.paid %}
+              <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+              <i class="bi bi-x-circle text-muted"></i>
+            {% endif %}
+          </td>
+          <td>{{ m.paid_date or "-" }}</td>
+          <td>
+            <button class="btn btn-sm btn-link p-0" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#items-{{ m.id }}">
+              展開 <i class="bi bi-chevron-down"></i>
+            </button>
+          </td>
+        </tr>
+        <!-- ★ 修正 Bug 2：collapse 不要直接套在 <tr> 上——<tr> 不是區塊
+             元素，瀏覽器（尤其手機版）常常無法正確計算它的 scrollHeight，
+             導致展開動畫沒展開完全，加上外層 .card 的 overflow:hidden，
+             內容就被裁掉。改成 Bootstrap 官方文件建議的作法：<tr> 一律
+             渲染在畫面上，真正的 collapse 目標是 <td> 裡面的一個 <div>
+             （區塊元素，高度可以正確計算，不會被父層裁切）。 -->
+        <tr class="{% if m.paid %}table-success{% endif %}">
+          <td colspan="6" class="p-0">
+            <div class="collapse" id="items-{{ m.id }}">
+              <table class="table table-sm mb-0">
+                <tbody>
+                  {% for item in m.item_list %}
+                  <tr>
+                    <td>{{ item.item_name }}</td>
+                    <td>{{ "%.0f"|format(item.unit_price) }} × {{ item.quantity }}</td>
+                    <td class="text-end">= ${{ "%.0f"|format(item.subtotal) }}</td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="3" class="text-muted">尚無收費項目</td></tr>
+                  {% endfor %}
+                  <tr class="fw-bold">
+                    <td colspan="2">合計</td>
+                    <td class="text-end">${{ "%.0f"|format(m.receivable) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted">這個活動目前沒有參與人員</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
